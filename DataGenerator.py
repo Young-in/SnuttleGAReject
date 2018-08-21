@@ -77,16 +77,16 @@ class DataGenerator:
         
         for i in range(self.Reqs.reqN):
             i += 1
-            if i not in tripSet :
-                print("there are no %d in trips" %i)
-                return False
-            if -i not in tripSet :
-                print("there are no %d in trips" % -i)
-                return False
-            if tripSet.count(i) != 1 :
+            # if i not in tripSet :
+            #     print("there are no %d in trips" %i)
+            #     return False
+            # if -i not in tripSet :
+            #     print("there are no %d in trips" % -i)
+            #     return False
+            if tripSet.count(i) > 1 :
                 print("there are more %d s in trips" % i)
                 return False
-            if tripSet.count(-i) != 1 :
+            if tripSet.count(-i) > 1 :
                 print("there are more %d s in trips" % -i)
                 return False
         return True
@@ -118,7 +118,36 @@ class DataGenerator:
         return True
 
     def getCost(self, chromo: Chromosome):
-        return len(chromo.rejects)/chromo.reqN
+        if not self.chromoAble(chromo):
+            return 2.0
+
+        sk = chromo.reqN
+        for trip in chromo.trips:
+            ts = []
+            stas = []
+            l = 0
+            for i in trip:
+                ia = abs(i)
+                ts.append(self.Reqs.requests[ia - 1][(ia - i) // ia])
+                stas.append(self.Reqs.requests[ia - 1][((ia - i) // ia) + 1])
+                l += 1
+            
+            ats = [ts[0]]
+            
+            for i in range(l - 1):
+                d = self.Map.dists[stas[i]][stas[i+1]]
+                at = ats[i] + d
+
+                if trip[i+1] < 0:
+                    if ts[i+1] < at: return False
+                    else: ats.append(at)
+                
+                if trip[i+1] > 0:
+                    if ts[i+1] > at:
+                        sk += (ts[i+1] - at) / self.Reqs.T
+                        ats.append(ts[i+1])
+                    else: ats.append(at)
+        return len(chromo.rejects)/chromo.reqN + 1/sk
 
     def generateCFSS(self):
         requests = list(enumerate(self.Reqs.requests[:]))
